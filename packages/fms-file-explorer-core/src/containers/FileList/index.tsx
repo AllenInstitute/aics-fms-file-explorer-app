@@ -4,13 +4,14 @@ import { defaults, isFunction } from "lodash";
 import { IContextualMenuItem } from "office-ui-fabric-react";
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { FixedSizeList } from "react-window";
+import { FixedSizeGrid, FixedSizeList, ListOnItemsRenderedProps } from "react-window";
 import InfiniteLoader from "react-window-infinite-loader";
 
 import getContextMenuItems from "../ContextMenu/items";
 import FileSet from "../../entity/FileSet";
 import Header from "./Header";
 import LazilyRenderedRow from "./LazilyRenderedRow";
+import LazilyRenderedThumbnail from "./LazilyRenderedThumbnail";
 import { interaction, selection } from "../../state";
 import useLayoutMeasurements from "../../hooks/useLayoutMeasurements";
 import useFileSelector from "./useFileSelector";
@@ -30,6 +31,11 @@ interface FileListProps {
     rowHeight?: number; // how tall each row of the list will be, in px
     sortOrder: number;
     totalCount?: number;
+}
+
+interface InnerContentProps {
+    onItemsRendered: (props: ListOnItemsRenderedProps) => any;
+    ref: React.Ref<any>;
 }
 
 const DEFAULTS = {
@@ -53,6 +59,9 @@ export default function FileList(props: FileListProps) {
     const onSelect = useFileSelector(fileSet, sortOrder);
     const dispatch = useDispatch();
     const fileSelection = useSelector(selection.selectors.getFileSelection);
+
+    // TODO: pull from state
+    const thumbnailViewSelected = true;
 
     // If this is the "root" file list (e.g., all files in FMS), this component should take up
     // 100% of the height of its container.
@@ -109,6 +118,79 @@ export default function FileList(props: FileListProps) {
         dispatch(interaction.actions.showContextMenu(items, evt.nativeEvent));
     };
 
+    let innerContent;
+    if (thumbnailViewSelected) {
+        innerContent = function innerContent(props: InnerContentProps) {
+            const { onItemsRendered, ref } = props;
+            const COLUMN_COUNT = 3;
+            return (
+                <FixedSizeGrid
+                    columnCount={COLUMN_COUNT}
+                    columnWidth={measuredWidth / COLUMN_COUNT}
+                    itemData={{
+                        fileSet: fileSet,
+                        onSelect,
+                        onContextMenu: onFileRowContextMenu,
+                    }}
+                    height={isRoot ? measuredHeight : calculatedHeight} // height of the list itself; affects number of rows rendered at any given time
+                    onItemsRendered={({
+                        overscanRowStartIndex,
+                        overscanRowStopIndex,
+                        visibleRowStartIndex,
+                        visibleRowStopIndex,
+                    }) => {
+                        const adapted = {
+                            overscanStartIndex: overscanRowStartIndex * COLUMN_COUNT + COLUMN_COUNT,
+                            overscanStopIndex: overscanRowStopIndex * COLUMN_COUNT + COLUMN_COUNT,
+                            visibleStartIndex: visibleRowStartIndex * COLUMN_COUNT + COLUMN_COUNT,
+                            visibleStopIndex: visibleRowStopIndex * COLUMN_COUNT + COLUMN_COUNT,
+                        };
+                        onItemsRendered(adapted);
+                    }}
+                    ref={ref}
+                    rowCount={totalCount}
+                    rowHeight={150}
+                    width={measuredWidth}
+                >
+                    {LazilyRenderedThumbnail}
+                </FixedSizeGrid>
+            );
+        };
+    } else {
+        innerContent = function innerContent(props: InnerContentProps) {
+            const { onItemsRendered, ref: innerRef } = props;
+            const callbackRef = (instance: FixedSizeList | null) => {
+                listRef.current = instance;
+
+                // react-window-infinite-loader takes a reference to the List component instance:
+                // https://github.com/bvaughn/react-window-infinite-loader/blob/571f6c37b692d2e01bd3b762cdc93ca7c8f7ebf3/src/InfiniteLoader.js#L103-L105
+                if (isFunction(innerRef)) {
+                    innerRef(instance);
+                }
+            };
+
+            return (
+                <FixedSizeList
+                    itemData={{
+                        fileSet: fileSet,
+                        onSelect,
+                        onContextMenu: onFileRowContextMenu,
+                    }}
+                    itemSize={rowHeight} // row height
+                    height={height} // height of the list itself; affects number of rows rendered at any given time
+                    itemCount={totalCount}
+                    onItemsRendered={onItemsRendered}
+                    outerElementType={Header}
+                    outerRef={outerRef}
+                    ref={callbackRef}
+                    width={measuredWidth}
+                >
+                    {LazilyRenderedRow}
+                </FixedSizeList>
+            );
+        };
+    }
+
     return (
         <div className={classNames(styles.container, className)}>
             <div
@@ -127,37 +209,7 @@ export default function FileList(props: FileListProps) {
                     )}
                     itemCount={totalCount}
                 >
-                    {({ onItemsRendered, ref: innerRef }) => {
-                        const callbackRef = (instance: FixedSizeList | null) => {
-                            listRef.current = instance;
-
-                            // react-window-infinite-loader takes a reference to the List component instance:
-                            // https://github.com/bvaughn/react-window-infinite-loader/blob/571f6c37b692d2e01bd3b762cdc93ca7c8f7ebf3/src/InfiniteLoader.js#L103-L105
-                            if (isFunction(innerRef)) {
-                                innerRef(instance);
-                            }
-                        };
-
-                        return (
-                            <FixedSizeList
-                                itemData={{
-                                    fileSet: fileSet,
-                                    onSelect,
-                                    onContextMenu: onFileRowContextMenu,
-                                }}
-                                itemSize={rowHeight} // row height
-                                height={height} // height of the list itself; affects number of rows rendered at any given time
-                                itemCount={totalCount}
-                                onItemsRendered={onItemsRendered}
-                                outerElementType={Header}
-                                outerRef={outerRef}
-                                ref={callbackRef}
-                                width={measuredWidth}
-                            >
-                                {LazilyRenderedRow}
-                            </FixedSizeList>
-                        );
-                    }}
+                    {innerContent}
                 </InfiniteLoader>
             </div>
             <p className={styles.rowCountDisplay}>{totalCount} files</p>
