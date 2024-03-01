@@ -18,6 +18,7 @@ import { ValueError } from "../../errors";
 import * as directoryTreeSelectors from "./selectors";
 import { interaction, metadata, selection } from "../../state";
 import { naturalComparator } from "../../util/strings";
+import ThumbnailList from "./ThumbnailList";
 
 export interface UseDirectoryHierarchyParams {
     ancestorNodes?: string[];
@@ -132,7 +133,8 @@ const useDirectoryHierarchy = (
                 if (!cancel) {
                     dispatch(
                         receiveContent(
-                            <FileList fileSet={fileSet} isRoot={isRoot} sortOrder={sortOrder} />
+                            <ThumbnailList fileSet={fileSet} isRoot={isRoot} sortOrder={sortOrder} />
+                            // <FileList fileSet={fileSet} isRoot={isRoot} sortOrder={sortOrder} />
                         )
                     );
                 }

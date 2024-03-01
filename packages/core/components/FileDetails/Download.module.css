@@ -1,0 +1,21 @@
+.download-button {
+    align-items: center;
+    background-color: #A9A9A9;
+    color: black;
+    display: flex;
+    font-size: 12px;
+    justify-content: center;
+    min-width: calc(50% - 5px);
+    max-width: calc(50% - 5px);
+    text-align: center;
+    text-decoration: none;
+}
+
+.download-button:hover {
+    background-color: #878787;
+    color: white;
+}
+
+.download-button > p {
+    margin: 0 0 0 2px;
+}

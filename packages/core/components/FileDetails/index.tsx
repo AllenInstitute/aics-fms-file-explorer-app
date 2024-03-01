@@ -265,7 +265,7 @@ export default function FileDetails(props: FileDetails) {
                             {fileDetails && thumbnail}
                             <div className={styles.fileActions}>
                                 <Download
-                                    buttonStyles={ICON_BUTTON_STYLES}
+                                    className={styles.downloadButton}
                                     fileDetails={fileDetails}
                                 />
                                 <OpenFileButton

@@ -1,13 +1,15 @@
-import { ActionButton, IButtonStyles } from "@fluentui/react";
-import { throttle } from "lodash";
+import { Icon } from "@fluentui/react";
+import classNames from "classnames";
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
 
 import { interaction } from "../../state";
 import FileDetail from "../../entity/FileDetail";
 
+import styles from "./Download.module.css";
+
 interface DownloadProps {
-    buttonStyles?: IButtonStyles;
+    className?: string;
     fileDetails: FileDetail | null;
 }
 
@@ -20,17 +22,13 @@ export default function Download(props: DownloadProps) {
     const dispatch = useDispatch();
     const processStatuses = useSelector(interaction.selectors.getProcessStatuses);
 
-    // Prevent triggering multiple downloads accidentally -- throttle with a 1s wait
-    const onDownload = React.useMemo(() => {
+    const downloadLink = React.useMemo(() => {
         if (!fileDetails) {
-            return () => {
-                /** noop */
-            };
+            return "";
         }
 
-        return throttle(() => {
-            dispatch(interaction.actions.downloadFiles([fileDetails.details]));
-        }, 1000); // 1s, in ms (arbitrary)
+        // TODO: Need to make sure this works with VPN users from home with no vast connection
+        return fileDetails.path;
     }, [dispatch, fileDetails]);
 
     if (!fileDetails) {
@@ -38,16 +36,19 @@ export default function Download(props: DownloadProps) {
     }
 
     return (
-        <ActionButton
-            ariaLabel="Download file"
-            iconProps={{ iconName: "Download" }}
-            disabled={processStatuses.some((status) =>
-                status.data.fileId?.includes(fileDetails.id)
+        <a
+            className={classNames(
+                styles.downloadButton, 
+                { [styles.disabled]: processStatuses.some(status => status.data.fileId?.includes(fileDetails.id))},
+                props.className
             )}
-            onClick={onDownload}
-            styles={props.buttonStyles}
+            download={fileDetails.path.replace(/^.*[\\\/]/, '')}
+            href={downloadLink}
+            target="_blank"
             title="Download"
-            text="Download"
-        />
+        >
+            <Icon iconName="Download" />
+            <p>Download</p>
+        </a>
     );
 }
