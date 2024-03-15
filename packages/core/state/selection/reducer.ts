@@ -61,7 +61,6 @@ export const initialState = {
     filters: [PAST_YEAR_FILTER],
     openFileFolders: [],
     shouldDisplaySmallFont: false,
-    sortColumn: new FileSort(AnnotationName.UPLOADED, SortOrder.DESC),
 };
 
 export default makeReducer<SelectionStateBranch>(

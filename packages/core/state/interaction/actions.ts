@@ -14,7 +14,7 @@ import { ModalType } from "../../components/Modal";
 import PersistentConfigService, {
     UserSelectedApplication,
 } from "../../services/PersistentConfigService";
-import { NotificationService } from "../../services";
+import { DatabaseService, NotificationService } from "../../services";
 import { FmsFile } from "../../services/FileService";
 
 const STATE_BRANCH_NAME = "interaction";
@@ -228,6 +228,7 @@ export const SET_PLATFORM_DEPENDENT_SERVICES = makeConstant(
 
 export interface PlatformDependentServices {
     applicationInfoService: ApplicationInfoService;
+    databaseService: DatabaseService;
     fileDownloadService: FileDownloadService;
     fileViewerService: FileViewerService;
     frontendInsights: FrontendInsights;
@@ -725,6 +726,26 @@ export function openWith(
             files,
         },
         type: OPEN_WITH,
+    };
+}
+
+/**
+ * BROWSE_FOR_COLLECTION_SOURCE
+ *
+ * Intention to prompt the user to browse for a collection source.
+ */
+export const BROWSE_FOR_COLLECTION_SOURCE = makeConstant(
+    STATE_BRANCH_NAME,
+    "browse-for-collection-source"
+);
+
+export interface BrowseForCollectionSourceAction {
+    type: string;
+}
+
+export function browseForCollectionSource(): BrowseForCollectionSourceAction {
+    return {
+        type: BROWSE_FOR_COLLECTION_SOURCE,
     };
 }
 

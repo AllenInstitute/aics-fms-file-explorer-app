@@ -1,3 +1,4 @@
+import { Shimmer } from "@fluentui/react";
 import classNames from "classnames";
 import { map } from "lodash";
 import * as React from "react";
@@ -39,7 +40,7 @@ export default function LazilyRenderedRow(props: LazilyRenderedRowProps) {
     } = props;
 
     const shouldDisplaySmallFont = useSelector(selection.selectors.getShouldDisplaySmallFont);
-    const annotations = useSelector(selection.selectors.getOrderedDisplayAnnotations);
+    const annotations = useSelector(selection.selectors.getAnnotationsToDisplay);
     const columnWidths = useSelector(selection.selectors.getColumnWidths);
     const fileSelection = useSelector(selection.selectors.getFileSelection);
 
@@ -53,7 +54,7 @@ export default function LazilyRenderedRow(props: LazilyRenderedRowProps) {
         return fileSelection.isFocused(fileSet, index);
     }, [fileSelection, fileSet, index]);
 
-    let content;
+    let content = null;
     if (file) {
         const cells = map(annotations, (annotation) => ({
             columnKey: annotation.name,
@@ -72,10 +73,9 @@ export default function LazilyRenderedRow(props: LazilyRenderedRowProps) {
                 })}
                 rowIdentifier={{ index, id: file.file_id }}
                 onSelect={onSelect}
+                data-testid="asdsadasdsadsad"
             />
         );
-    } else {
-        content = "Loading...";
     }
 
     return (
@@ -89,7 +89,9 @@ export default function LazilyRenderedRow(props: LazilyRenderedRowProps) {
             }}
             onContextMenu={onContextMenu}
         >
-            {content}
+            <Shimmer className={styles.shimmer} isDataLoaded={!!file}>
+                {content}
+            </Shimmer>
         </div>
     );
 }

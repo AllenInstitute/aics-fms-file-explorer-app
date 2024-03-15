@@ -6,7 +6,7 @@ import { interaction, selection } from "../../state";
 import { ContextMenuItem } from "../ContextMenu";
 import getContextMenuItems, { ContextMenuActions } from "../ContextMenu/items";
 import { FmsFile } from "../../services/FileService";
-import { AnnotationName, FileExplorerServiceBaseUrl } from "../../constants";
+import { AnnotationName } from "../../constants";
 
 /**
  * Custom React hook for creating the file access context menu.
@@ -18,12 +18,18 @@ import { AnnotationName, FileExplorerServiceBaseUrl } from "../../constants";
 export default function useFileAccessContextMenu(filters?: FileFilter[], onDismiss?: () => void) {
     const dispatch = useDispatch();
     const fileSelection = useSelector(selection.selectors.getFileSelection);
+    const fileExplorerServiceBaseUrl = useSelector(
+        interaction.selectors.getFileExplorerServiceBaseUrl
+    );
     const userSelectedApplications = useSelector(interaction.selectors.getUserSelectedApplications);
     const { executionEnvService } = useSelector(interaction.selectors.getPlatformDependentServices);
-    const [plateLink, setPlateLink] = React.useState("");
+    const [plateLink, setPlateLink] = React.useState<string>();
+    const [filePath, setFilePath] = React.useState<string>();
 
     fileSelection.fetchFocusedItemDetails().then((fileDetails: FmsFile | undefined) => {
         if (!fileDetails) return;
+        setFilePath(fileDetails.file_path);
+
         // Grabbing plate barcode
         const platebarcode = fileDetails.annotations.find(
             (x) => x.name === AnnotationName.PLATE_BARCODE
@@ -31,7 +37,11 @@ export default function useFileAccessContextMenu(filters?: FileFilter[], onDismi
         // If there's a barcode, make plateUI option available
         if (platebarcode?.values) {
             const barcode: string = platebarcode.values[0].toString();
-            setPlateLink(createPlateLink(barcode));
+            // LabKey does not support HTTPS yet
+            const baseURLHttp = fileExplorerServiceBaseUrl.replace("https", "http");
+            setPlateLink(
+                `${baseURLHttp}/labkey/aics_microscopy/AICS/editPlate.view?Barcode=${barcode}}`
+            );
         }
     });
 
@@ -68,13 +78,25 @@ export default function useFileAccessContextMenu(filters?: FileFilter[], onDismi
                         dispatch(interaction.actions.promptForNewExecutable(filters));
                     },
                 },
+                ...(plateLink
+                    ? [
+                          {
+                              key: ContextMenuActions.OPEN_PLATE_UI,
+                              text: "Open Plate UI",
+                              title: "Open this plate in the Plate UI",
+                              href: plateLink,
+                              target: "_blank",
+                              disabled: !plateLink,
+                          },
+                      ]
+                    : []),
                 {
-                    key: ContextMenuActions.OPEN_PLATE_UI,
-                    text: "Open Plate UI",
-                    title: "Open this plate in the Plate UI",
-                    href: plateLink,
+                    key: ContextMenuActions.OPEN_3D_WEB_VIEWER,
+                    text: "Open 3D Web Viewer",
+                    title: "Open this file in the AICS 3D Web Viewer",
+                    href: `https://allen-cell-animated.github.io/website-3d-cell-viewer/?url=${filePath}/`,
                     target: "_blank",
-                    disabled: !plateLink,
+                    disabled: !filePath,
                 },
             ];
 
@@ -133,13 +155,7 @@ export default function useFileAccessContextMenu(filters?: FileFilter[], onDismi
             filters,
             onDismiss,
             plateLink,
+            filePath,
         ]
     );
-}
-
-function createPlateLink(barcode: string): string {
-    // fileExplorerServiceBaseUrl may not be defined: default is Production LabKey
-    const baseURL = global.fileExplorerServiceBaseUrl || FileExplorerServiceBaseUrl.PRODUCTION;
-    const baseURLHttp = baseURL.replace("https", "http"); // LabKey does not support HTTPS yet
-    return `${baseURLHttp}/labkey/aics_microscopy/AICS/editPlate.view?Barcode=${barcode}}`;
 }

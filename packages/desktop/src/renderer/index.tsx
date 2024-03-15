@@ -10,9 +10,10 @@ import { Provider } from "react-redux";
 
 import FmsFileExplorer from "../../../core/App";
 import { PersistedConfigKeys } from "../../../core/services";
-import { createReduxStore, interaction } from "../../../core/state";
+import { createReduxStore, interaction, selection } from "../../../core/state";
 
 import ApplicationInfoServiceElectron from "../services/ApplicationInfoServiceElectron";
+import DatabaseServiceElectron from "../services/DatabaseServiceElectron";
 import ExecutionEnvServiceElectron from "../services/ExecutionEnvServiceElectron";
 import FileDownloadServiceElectron from "../services/FileDownloadServiceElectron";
 import FileViewerServiceElectron from "../services/FileViewerServiceElectron";
@@ -25,6 +26,7 @@ const APP_ID = "fms-file-explorer";
 const notificationService = new NotificationServiceElectron();
 const persistentConfigService = new PersistentConfigServiceElectron();
 const applicationInfoService = new ApplicationInfoServiceElectron();
+const databaseService = new DatabaseServiceElectron();
 const executionEnvService = new ExecutionEnvServiceElectron(notificationService);
 // application analytics/metrics
 const frontendInsights = new FrontendInsights(
@@ -51,6 +53,7 @@ frontendInsights.dispatchUserEvent({ type: "SESSION_START" });
 const collectPlatformDependentServices = memoize(
     (downloadServiceBaseUrl: FileDownloadServiceBaseUrl) => ({
         applicationInfoService,
+        databaseService,
         executionEnvService,
         fileDownloadService: new FileDownloadServiceElectron(
             notificationService,
@@ -73,6 +76,8 @@ const store = createReduxStore({
 store.subscribe(() => {
     const state = store.getState();
     const csvColumns = interaction.selectors.getCsvColumns(state);
+    const collection = selection.selectors.getCollection(state);
+    const lastUsedCollection = collection ? { id: collection.id, uri: collection.uri } : undefined;
     const userSelectedApplications = interaction.selectors.getUserSelectedApplications(state);
     const hasUsedApplicationBefore = interaction.selectors.hasUsedApplicationBefore(state);
     const appState = {
@@ -82,6 +87,7 @@ store.subscribe(() => {
     if (JSON.stringify(appState) !== JSON.stringify(persistentConfigService.getAll())) {
         persistentConfigService.persist({
             [PersistedConfigKeys.CsvColumns]: csvColumns,
+            [PersistedConfigKeys.LastUsedCollection]: lastUsedCollection,
             [PersistedConfigKeys.UserSelectedApplications]: userSelectedApplications,
             [PersistedConfigKeys.HasUsedApplicationBefore]: hasUsedApplicationBefore,
         });

@@ -25,7 +25,8 @@ interface Props {
     selectedCollection?: Dataset;
 }
 
-const ALL_FILES_KEY = "All of FMS";
+const AI_FILES_KEY = "Allen Institute FMS";
+const CREATE_FROM_FILE = "Create from file";
 
 const SECONDARY_BUTTON_STYLES: IButtonStyles = {
     label: {
@@ -109,6 +110,14 @@ const LIVE_COLLECTION_HEADER: IContextualMenuItem = {
     itemProps: DEFAULT_OPTION_PROPS,
 };
 
+const UNPUBLISHED_COLLECTION_HEADER: IContextualMenuItem = {
+    key: "unpublished-collections",
+    text: "Unpublished Collections",
+    title: "Collections generated from a CSV, Parquet, or JSON file and exist outside of FMS",
+    itemType: ContextualMenuItemType.Header,
+    itemProps: DEFAULT_OPTION_PROPS,
+};
+
 const IS_FIXED_TOOLTIP =
     'If frozen, the collection is an immutable, point-in-time snapshot of the metadata for the files you’ve selected (a "dataset"). No files have been added to or removed from the collection, nor has the files\' metadata been modified since creation of the collection.';
 const IS_PRIVATE_TOOLTIP =
@@ -146,15 +155,25 @@ export default function CollectionControl(props: Props) {
     const [searchValue, setSearchValue] = React.useState("");
 
     const collectionOptions = React.useMemo(() => {
-        // Make "All Files" a data source option to represent
+        // Make "Allen Institute FMS" a data source option to represent
         // having no data source filter
-        const ALL_FILES_OPTION: IContextualMenuItem = {
-            text: ALL_FILES_KEY,
-            key: ALL_FILES_KEY,
+        const AI_FILES_OPTION: IContextualMenuItem = {
+            text: AI_FILES_KEY,
+            key: AI_FILES_KEY,
             onClick: () => {
                 dispatch(selection.actions.changeCollection(undefined));
             },
             itemProps: selectedCollection ? DEFAULT_OPTION_PROPS : SELECTED_OPTION_PROPS,
+        };
+
+        const CREATE_FROM_FILE_OPTION: IContextualMenuItem = {
+            text: CREATE_FROM_FILE,
+            key: CREATE_FROM_FILE,
+            onClick: () => {
+                dispatch(interaction.actions.browseForCollectionSource());
+            },
+            title: "Create a collection from a CSV, Parquet, or JSON file on your machine",
+            itemProps: DEFAULT_OPTION_PROPS,
         };
 
         const nameToCollectionMap = collections
@@ -173,6 +192,7 @@ export default function CollectionControl(props: Props) {
 
         const frozenCollections: IContextualMenuItem[] = [];
         const liveCollections: IContextualMenuItem[] = [];
+        const unpublishedCollections: IContextualMenuItem[] = [];
         Object.values(nameToCollectionMap).forEach((collectionsWithSameName) => {
             const option = {
                 ...convertCollectionToOption(
@@ -200,7 +220,9 @@ export default function CollectionControl(props: Props) {
                         : undefined,
             };
 
-            if (collectionsWithSameName[0].fixed) {
+            if (collectionsWithSameName[0].uri) {
+                unpublishedCollections.push(option);
+            } else if (collectionsWithSameName[0].fixed) {
                 frozenCollections.push(option);
             } else {
                 liveCollections.push(option);
@@ -208,11 +230,14 @@ export default function CollectionControl(props: Props) {
         });
 
         return [
-            ALL_FILES_OPTION,
+            AI_FILES_OPTION,
             ...(liveCollections.length ? [LIVE_COLLECTION_HEADER] : []),
             ...liveCollections,
             ...(frozenCollections.length ? [FROZEN_COLLECTION_HEADER] : []),
             ...frozenCollections,
+            UNPUBLISHED_COLLECTION_HEADER,
+            ...unpublishedCollections,
+            CREATE_FROM_FILE_OPTION,
         ];
     }, [collections, selectedCollection, searchValue, dispatch]);
 
@@ -237,28 +262,34 @@ export default function CollectionControl(props: Props) {
                     className={styles.controlGroupDropdown}
                     isHidden={props.isCollapsed}
                     options={collectionOptions}
-                    selectedOption={selectedCollection?.name || ALL_FILES_KEY}
+                    selectedOption={selectedCollection?.name || AI_FILES_KEY}
                     onSearch={setSearchValue}
                     searchValue={searchValue}
                 />
-                <div className={styles.controlGroupDisplayGroup}>
-                    <TooltipHost content={IS_PRIVATE_TOOLTIP} onMouseLeave={props.onCollapse}>
-                        <h6 className={styles.controlGroupDisplay}>
-                            {selectedCollection?.private ? "Private" : "Internal"}
-                        </h6>
-                    </TooltipHost>
-                    <TooltipHost content={IS_FIXED_TOOLTIP} onMouseLeave={props.onCollapse}>
-                        <h6 className={styles.controlGroupDisplay}>
-                            {selectedCollection?.fixed ? "Frozen" : "Not Frozen"}
-                        </h6>
-                    </TooltipHost>
-                </div>
+                {!selectedCollection?.uri ? (
+                    <div className={styles.controlGroupDisplayGroup}>
+                        <TooltipHost content={IS_PRIVATE_TOOLTIP} onMouseLeave={props.onCollapse}>
+                            <h6 className={styles.controlGroupDisplay}>
+                                {selectedCollection?.private ? "Private" : "Internal"}
+                            </h6>
+                        </TooltipHost>
+                        <TooltipHost content={IS_FIXED_TOOLTIP} onMouseLeave={props.onCollapse}>
+                            <h6 className={styles.controlGroupDisplay}>
+                                {selectedCollection?.fixed ? "Frozen" : "Not Frozen"}
+                            </h6>
+                        </TooltipHost>
+                    </div>
+                ) : (
+                    <div className={styles.controlGroupDisplayGroup}>
+                        <h6 className={styles.controlGroupDisplay}>Not Published</h6>
+                    </div>
+                )}
             </div>
             <div className={styles.controlGroupButtons}>
                 <IconButton
                     className={styles.controlGroupButton}
                     data-testid="edit-button"
-                    disabled={!selectedCollection}
+                    disabled={!selectedCollection || !!selectedCollection.uri}
                     iconProps={{ iconName: "edit" }}
                     styles={SECONDARY_BUTTON_STYLES}
                     onClick={() => dispatch(interaction.actions.showEditCollectionDialog())}
@@ -269,7 +300,7 @@ export default function CollectionControl(props: Props) {
                     iconProps={{ iconName: "export" }}
                     title="Export"
                     menuProps={{ items: collectionExportMenuOptions }}
-                    disabled={!selectedCollection}
+                    disabled={!selectedCollection || !!selectedCollection.uri}
                     styles={SECONDARY_BUTTON_STYLES}
                 />
             </div>

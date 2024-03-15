@@ -34,6 +34,8 @@ import {
     DOWNLOAD_FILES,
     DownloadFilesAction,
     OpenWithDefaultAction,
+    hideVisibleModal,
+    BROWSE_FOR_COLLECTION_SOURCE,
 } from "./actions";
 import * as interactionSelectors from "./selectors";
 import CsvService, { CsvManifestRequest } from "../../services/CsvService";
@@ -56,7 +58,6 @@ import FileSelection from "../../entity/FileSelection";
 import FileFilter from "../../entity/FileFilter";
 import FileExplorerURL from "../../entity/FileExplorerURL";
 import FileSort, { SortOrder } from "../../entity/FileSort";
-import { HttpServiceBase } from "../../services";
 
 /**
  * Interceptor responsible for responding to a SET_PLATFORM_DEPENDENT_SERVICES action and
@@ -97,24 +98,20 @@ const downloadManifest = createLogic({
 
         try {
             const state = deps.getState();
-            const applicationVersion = interactionSelectors.getApplicationVersion(state);
-            const collection = selection.selectors.getCollection(state);
-            const baseUrl = interactionSelectors.getFileExplorerServiceBaseUrl(state);
-            const platformDependentServices = interactionSelectors.getPlatformDependentServices(
-                state
-            );
+            const {
+                databaseService,
+                fileDownloadService,
+                executionEnvService,
+            } = interactionSelectors.getPlatformDependentServices(state);
             let fileSelection = selection.selectors.getFileSelection(state);
             const filters = interactionSelectors.getFileFiltersForVisibleModal(state);
             const fileService = interactionSelectors.getFileService(state);
             const sortColumn = selection.selectors.getSortColumn(state);
-            const pathSuffix = collection
-                ? `/within/${HttpServiceBase.encodeURI(collection.name)}/${collection.version}`
-                : undefined;
+            const selectedCollection = selection.selectors.getCollection(state);
             const csvService = new CsvService({
-                applicationVersion,
-                baseUrl,
-                pathSuffix,
-                downloadService: platformDependentServices.fileDownloadService,
+                databaseService,
+                downloadService: fileDownloadService,
+                executionEnvService,
             });
 
             // If we have a specific path to get files from ignore selected files
@@ -155,7 +152,16 @@ const downloadManifest = createLogic({
                 annotations: annotations.map((annotation) => annotation.name),
                 selections,
             };
-            const result = await csvService.downloadCsv(request, manifestDownloadProcessId);
+            const shouldDownloadFromDatabase = !!selectedCollection?.uri;
+            let result;
+            if (shouldDownloadFromDatabase) {
+                result = await csvService.downloadCsvFromDatabase(
+                    request,
+                    manifestDownloadProcessId
+                );
+            } else {
+                result = await csvService.downloadCsvFromServer(request, manifestDownloadProcessId);
+            }
 
             if (result.resolution === DownloadResolution.CANCELLED) {
                 dispatch(removeStatus(manifestDownloadProcessId));
@@ -240,7 +246,12 @@ const downloadFiles = createLogic({
             await Promise.all(
                 filesToDownload.map(async (file) => {
                     const downloadRequestId = uniqueId();
-                    const fileByteDisplay = numberFormatter.displayValue(file.file_size, "bytes");
+                    // TODO: The byte display should be fixed automatically when moving to downloading using browser
+                    // https://github.com/AllenInstitute/aics-fms-file-explorer-app/issues/62
+                    const fileByteDisplay = numberFormatter.displayValue(
+                        file.file_size || 0,
+                        "bytes"
+                    );
                     const msg = `Downloading ${file.file_name}, ${fileByteDisplay} out of the total of ${totalBytesDisplay} set to download`;
 
                     const onCancel = () => {
@@ -254,7 +265,7 @@ const downloadFiles = createLogic({
                         dispatch(
                             processProgress(
                                 downloadRequestId,
-                                totalBytesDownloaded / file.file_size,
+                                file.file_size ? totalBytesDownloaded / file.file_size : 0,
                                 msg,
                                 onCancel,
                                 [file.file_id]
@@ -474,6 +485,38 @@ const openWithLogic = createLogic({
     type: OPEN_WITH,
 });
 
+const browseForCollectionSource = createLogic({
+    async process(deps: ReduxLogicDeps, dispatch, done) {
+        const { executionEnvService } = interactionSelectors.getPlatformDependentServices(
+            deps.getState()
+        );
+
+        const filePath = await executionEnvService.promptForFile(["csv", "parquet", "json"]);
+        if (filePath !== ExecutableEnvCancellationToken) {
+            const csvAsCollection = {
+                id: filePath,
+                name: filePath,
+                version: 1,
+                query: "",
+                client: "",
+                fixed: true,
+                uri: filePath,
+                private: true,
+                created: new Date(),
+                createdBy: interactionSelectors.getUserName(deps.getState()),
+            } as Dataset;
+
+            batch(() => {
+                dispatch(selection.actions.changeCollection(csvAsCollection));
+                dispatch(hideVisibleModal());
+            });
+        }
+
+        done();
+    },
+    type: BROWSE_FOR_COLLECTION_SOURCE,
+});
+
 /**
  * Interceptor responsible for responding to a SHOW_CONTEXT_MENU action and ensuring the previous
  * context menu is dismissed gracefully.
@@ -686,6 +729,7 @@ export default [
     checkForUpdates,
     downloadManifest,
     cancelFileDownloadLogic,
+    browseForCollectionSource,
     openWithDefault,
     openWithLogic,
     promptForNewExecutable,

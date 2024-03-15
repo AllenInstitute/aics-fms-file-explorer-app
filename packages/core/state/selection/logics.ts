@@ -23,6 +23,10 @@ import {
     changeCollection,
     CHANGE_COLLECTION,
     CHANGE_VIEW,
+    ChangeCollectionAction,
+    SetAnnotationHierarchyAction,
+    RemoveFromAnnotationHierarchyAction,
+    ReorderAnnotationHierarchyAction,
 } from "./actions";
 import { interaction, metadata, ReduxLogicDeps, selection } from "../";
 import * as selectionSelectors from "./selectors";
@@ -33,6 +37,7 @@ import FileFolder from "../../entity/FileFolder";
 import FileSelection from "../../entity/FileSelection";
 import FileSet from "../../entity/FileSet";
 import { RELATIVE_DATE_RANGES } from "../../constants";
+import HttpAnnotationService from "../../services/AnnotationService/HttpAnnotationService";
 
 /**
  * Interceptor responsible for transforming payload of SELECT_FILE actions to account for whether the intention is to
@@ -92,8 +97,9 @@ const selectFile = createLogic({
 const modifyAnnotationHierarchy = createLogic({
     async process(deps: ReduxLogicDeps, dispatch, done) {
         const { action, getState, ctx } = deps;
-        const { existingHierarchy, originalPayload } = ctx;
-        const currentHierarchy: Annotation[] = action.payload;
+        const { payload: currentHierarchy } = action as SetAnnotationHierarchyAction;
+        const existingHierarchy = ctx.existingHierarchy;
+        const originalPayload = ctx.originalAction.payload;
 
         const existingOpenFileFolders = selectionSelectors.getOpenFileFolders(getState());
 
@@ -143,15 +149,18 @@ const modifyAnnotationHierarchy = createLogic({
     transform(deps: ReduxLogicDeps, next, reject) {
         const { action, getState, ctx } = deps;
 
+        const allAnnotations = metadata.selectors.getAnnotations(getState());
         const existingHierarchy = selectionSelectors.getAnnotationHierarchy(getState());
         ctx.existingHierarchy = existingHierarchy;
-        ctx.originalPayload = action.payload;
-        const allAnnotations = metadata.selectors.getAnnotations(getState());
+        ctx.originalAction = action as
+            | RemoveFromAnnotationHierarchyAction
+            | ReorderAnnotationHierarchyAction;
         const annotation = find(
             allAnnotations,
             (annotation) => annotation.name === action.payload.id
         );
 
+        // Reject the action is the annotation modified is unknown to the state
         if (annotation === undefined) {
             reject && reject(action); // reject is for some reason typed in react-logic as optional
             return;
@@ -186,10 +195,12 @@ const setAvailableAnnotationsLogic = createLogic({
         const annotationNamesInHierachy = action.payload.map((a: Annotation) => a.name);
         const annotationService = interaction.selectors.getAnnotationService(getState());
         const applicationVersion = interaction.selectors.getApplicationVersion(getState());
-        if (applicationVersion) {
-            annotationService.setApplicationVersion(applicationVersion);
+        if (annotationService instanceof HttpAnnotationService) {
+            if (applicationVersion) {
+                annotationService.setApplicationVersion(applicationVersion);
+            }
+            annotationService.setHttpClient(httpClient);
         }
-        annotationService.setHttpClient(httpClient);
 
         try {
             dispatch(
@@ -301,10 +312,7 @@ const decodeFileExplorerURL = createLogic({
         // in the state's collection set yet & should be loaded in.
         if (collection && !selectedCollection) {
             const datasetService = interaction.selectors.getDatasetService(deps.getState());
-            const newCollection = await datasetService.getDataset(
-                collection.name,
-                collection.version
-            );
+            const newCollection = await datasetService.getDataset(collection);
             dispatch(metadata.actions.receiveCollections([...collections, newCollection]));
             selectedCollection = newCollection;
         }
@@ -445,11 +453,40 @@ const selectNearbyFile = createLogic({
  * a refresh action so that the resources pertain to the current collection
  */
 const changeCollectionLogic = createLogic({
-    async process(_: ReduxLogicDeps, dispatch, done) {
+    async process(deps: ReduxLogicDeps, dispatch, done) {
+        const action: ChangeCollectionAction = deps.action;
+        const collection = action.payload;
+        const { databaseService } = interaction.selectors.getPlatformDependentServices(
+            deps.getState()
+        );
+        const collections = metadata.selectors.getActiveCollections(deps.getState());
+        if (collection?.uri) {
+            await databaseService.setDataSource(collection.uri);
+        }
+        if (collection && !collections.find((collection) => collection.id === collection.id)) {
+            dispatch(metadata.actions.receiveCollections([...collections, collection]));
+        }
+
         dispatch(interaction.actions.refresh() as AnyAction);
         done();
     },
     type: CHANGE_COLLECTION,
+    async transform(deps: ReduxLogicDeps, next) {
+        const action: ChangeCollectionAction = deps.action;
+        const { databaseService } = interaction.selectors.getPlatformDependentServices(
+            deps.getState()
+        );
+        if (action.payload?.uri) {
+            const dataSource = await databaseService.getDataSource(action.payload?.uri);
+            action.payload = {
+                ...action.payload,
+                id: dataSource.name,
+                name: dataSource.name,
+                created: dataSource.created,
+            };
+        }
+        next(action);
+    },
 });
 
 /**

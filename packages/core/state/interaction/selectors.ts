@@ -1,11 +1,13 @@
 import { createSelector } from "reselect";
 
 import { State } from "../";
-import { HttpServiceBase } from "../../services";
-import AnnotationService from "../../services/AnnotationService";
-import DatasetService from "../../services/DatasetService";
-import FileService from "../../services/FileService";
 import { getCollection } from "../selection/selectors";
+import { AnnotationService, FileService, HttpServiceBase } from "../../services";
+import DatasetService from "../../services/DatasetService";
+import DatabaseAnnotationService from "../../services/AnnotationService/DatabaseAnnotationService";
+import DatabaseFileService from "../../services/FileService/DatabaseFileService";
+import HttpAnnotationService from "../../services/AnnotationService/HttpAnnotationService";
+import HttpFileService from "../../services/FileService/HttpFileService";
 
 // BASIC SELECTORS
 export const getApplicationVersion = (state: State) => state.interaction.applicationVersion;
@@ -19,6 +21,7 @@ export const getFileExplorerServiceBaseUrl = (state: State) =>
     state.interaction.fileExplorerServiceBaseUrl;
 export const getFileFiltersForVisibleModal = (state: State) =>
     state.interaction.fileFiltersForVisibleModal;
+export const getLastUsedCollection = (state: State) => state.interaction.lastUsedCollection;
 export const hasUsedApplicationBefore = (state: State) =>
     state.interaction.hasUsedApplicationBefore;
 export const getPlatformDependentServices = (state: State) =>
@@ -47,13 +50,25 @@ export const getFileService = createSelector(
         getUserName,
         getFileExplorerServiceBaseUrl,
         getCollection,
+        getPlatformDependentServices,
         getRefreshKey,
     ],
-    (applicationVersion, userName, fileExplorerBaseUrl, collection) => {
+    (
+        applicationVersion,
+        userName,
+        fileExplorerBaseUrl,
+        collection,
+        platformDependentServices
+    ): FileService => {
+        if (collection?.uri) {
+            return new DatabaseFileService({
+                databaseService: platformDependentServices.databaseService,
+            });
+        }
         const pathSuffix = collection
             ? `/within/${HttpServiceBase.encodeURI(collection.name)}/${collection.version}`
             : undefined;
-        return new FileService({
+        return new HttpFileService({
             applicationVersion,
             userName,
             baseUrl: fileExplorerBaseUrl,
@@ -68,13 +83,25 @@ export const getAnnotationService = createSelector(
         getUserName,
         getFileExplorerServiceBaseUrl,
         getCollection,
+        getPlatformDependentServices,
         getRefreshKey,
     ],
-    (applicationVersion, userName, fileExplorerBaseUrl, collection) => {
+    (
+        applicationVersion,
+        userName,
+        fileExplorerBaseUrl,
+        collection,
+        platformDependentServices
+    ): AnnotationService => {
+        if (collection?.uri) {
+            return new DatabaseAnnotationService({
+                databaseService: platformDependentServices.databaseService,
+            });
+        }
         const pathSuffix = collection
             ? `/within/${HttpServiceBase.encodeURI(collection.name)}/${collection.version}`
             : undefined;
-        return new AnnotationService({
+        return new HttpAnnotationService({
             applicationVersion,
             userName,
             baseUrl: fileExplorerBaseUrl,
@@ -84,9 +111,21 @@ export const getAnnotationService = createSelector(
 );
 
 export const getDatasetService = createSelector(
-    [getApplicationVersion, getUserName, getFileExplorerServiceBaseUrl, getRefreshKey],
-    (applicationVersion, userName, fileExplorerBaseUrl) => {
-        return new DatasetService({ applicationVersion, userName, baseUrl: fileExplorerBaseUrl });
+    [
+        getApplicationVersion,
+        getUserName,
+        getFileExplorerServiceBaseUrl,
+        getPlatformDependentServices,
+        getRefreshKey,
+    ],
+    (applicationVersion, userName, fileExplorerBaseUrl, platformDependentServices) => {
+        const { databaseService } = platformDependentServices;
+        return new DatasetService({
+            applicationVersion,
+            userName,
+            baseUrl: fileExplorerBaseUrl,
+            database: databaseService,
+        });
     }
 );
 

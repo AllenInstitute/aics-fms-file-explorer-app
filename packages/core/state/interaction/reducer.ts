@@ -37,6 +37,7 @@ import FileFilter from "../../entity/FileFilter";
 import ExecutionEnvServiceNoop from "../../services/ExecutionEnvService/ExecutionEnvServiceNoop";
 import { UserSelectedApplication } from "../../services/PersistentConfigService";
 import NotificationServiceNoop from "../../services/NotificationService/NotificationServiceNoop";
+import DatabaseServiceNoop from "../../services/DatabaseService/DatabaseServiceNoop";
 
 export interface InteractionStateBranch {
     applicationVersion?: string;
@@ -47,6 +48,7 @@ export interface InteractionStateBranch {
     csvColumns?: string[];
     fileExplorerServiceBaseUrl: string;
     fileFiltersForVisibleModal: FileFilter[];
+    lastUsedCollection?: { id: string; uri?: string };
     hasUsedApplicationBefore: boolean;
     platformDependentServices: PlatformDependentServices;
     pythonSnippet?: PythonicDataAccessSnippet;
@@ -56,7 +58,7 @@ export interface InteractionStateBranch {
     visibleModal?: ModalType;
 }
 
-export const initialState = {
+export const initialState: InteractionStateBranch = {
     contextMenuIsVisible: false,
     contextMenuItems: [],
     // Passed to `ContextualMenu` as `target`. From the "@fluentui/react" docs:
@@ -69,6 +71,7 @@ export const initialState = {
     hasUsedApplicationBefore: false,
     platformDependentServices: {
         applicationInfoService: new ApplicationInfoServiceNoop(),
+        databaseService: new DatabaseServiceNoop(),
         fileDownloadService: new FileDownloadServiceNoop(),
         fileViewerService: new FileViewerServiceNoop(),
         frontendInsights: new FrontendInsights({
@@ -82,6 +85,7 @@ export const initialState = {
         persistentConfigService: new PersistentConfigServiceNoop(),
     },
     status: [],
+    visibleModal: ModalType.DataSourcePrompt,
 };
 
 export default makeReducer<InteractionStateBranch>(

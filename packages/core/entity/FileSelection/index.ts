@@ -1,7 +1,8 @@
 import { find, isArray, reject } from "lodash";
 
 import { IndexError, ValueError } from "../../errors";
-import { FmsFile, Selection } from "../../services/FileService";
+import { FmsFile } from "../../services/FileService";
+import { Selection } from "../../services/FileService/HttpFileService";
 import FileFilter from "../FileFilter";
 import FileSet from "../FileSet";
 import { SortOrder } from "../FileSort";
@@ -507,28 +508,22 @@ export default class FileSelection {
      * Return array of Selections, a flattened & compact form of the selections
      */
     public toCompactSelectionList(): Selection[] {
-        const selections: Selection[] = [];
-        for (const [fileSet, selectedRanges] of this.groupByFileSet().entries()) {
-            const accumulator: { [index: string]: any } = {};
-            const selection: Selection = {
-                filters: fileSet.filters.reduce((accum, filter) => {
-                    const existing = accum[filter.name] || [];
-                    return {
-                        ...accum,
-                        [filter.name]: [...existing, filter.value],
-                    };
-                }, accumulator),
-                indexRanges: selectedRanges.map((range) => range.toJSON()),
-                sort: fileSet.sort
-                    ? {
-                          annotationName: fileSet.sort.annotationName,
-                          ascending: fileSet.sort.order === SortOrder.ASC,
-                      }
-                    : undefined,
-            };
-            selections.push(selection);
-        }
-        return selections;
+        return [...this.groupByFileSet().entries()].map(([fileSet, selectedRanges]) => ({
+            filters: fileSet.filters.reduce(
+                (accum, filter) => ({
+                    ...accum,
+                    [filter.name]: [...(accum[filter.name] || []), filter.value],
+                }),
+                {} as { [index: string]: any }
+            ),
+            indexRanges: selectedRanges.map((range) => range.toJSON()),
+            sort: fileSet.sort
+                ? {
+                      annotationName: fileSet.sort.annotationName,
+                      ascending: fileSet.sort.order === SortOrder.ASC,
+                  }
+                : undefined,
+        }));
     }
 
     /**

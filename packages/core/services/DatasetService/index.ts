@@ -1,5 +1,7 @@
-import HttpServiceBase from "../HttpServiceBase";
-import { Selection } from "../FileService";
+import HttpServiceBase, { ConnectionConfig } from "../HttpServiceBase";
+import { Selection } from "../FileService/HttpFileService";
+import DatabaseService from "../DatabaseService";
+import DatabaseServiceNoop from "../DatabaseService/DatabaseServiceNoop";
 
 export interface Dataset {
     id: string;
@@ -11,6 +13,7 @@ export interface Dataset {
     query: string;
     client: string;
     fixed: boolean;
+    uri?: string;
     private: boolean;
     created: Date;
     createdBy: string;
@@ -35,12 +38,22 @@ export interface PythonicDataAccessSnippet {
     setup: string;
 }
 
+interface DatasetConnectionConfig extends ConnectionConfig {
+    database: DatabaseService;
+}
+
 /**
  * Service responsible for fetching dataset related metadata.
  */
 export default class DatasetService extends HttpServiceBase {
     private static readonly ENDPOINT_VERSION = "2.0";
     public static readonly BASE_DATASET_URL = `file-explorer-service/${DatasetService.ENDPOINT_VERSION}/dataset`;
+    private readonly database: DatabaseService;
+
+    constructor(config: DatasetConnectionConfig = { database: new DatabaseServiceNoop() }) {
+        super(config);
+        this.database = config.database;
+    }
 
     /**
      * Requests to create a dataset matching given specification including index-based file selection.
@@ -109,8 +122,29 @@ export default class DatasetService extends HttpServiceBase {
     /**
      * Request for a specific dataset.
      */
-    public async getDataset(name: string, version: number): Promise<Dataset> {
-        const requestUrl = `${this.baseUrl}/${DatasetService.BASE_DATASET_URL}/${name}/${version}`;
+    public async getDataset(collection: {
+        name: string;
+        version: number;
+        uri?: string;
+    }): Promise<Dataset> {
+        if (collection.uri) {
+            const info = await this.database.getDataSource(collection.uri);
+            return {
+                id: info.name,
+                name: info.name,
+                version: 1,
+                query: "",
+                client: "explorer",
+                fixed: true,
+                private: true,
+                uri: collection.uri,
+                created: info.created,
+                createdBy: "Unknown",
+            };
+        }
+
+        // Find dataset on server
+        const requestUrl = `${this.baseUrl}/${DatasetService.BASE_DATASET_URL}/${collection.name}/${collection.version}`;
         console.log(`Requesting dataset from the following url: ${requestUrl}`);
 
         // This data should never be stale, so, avoid using a response cache
