@@ -16,3 +16,21 @@
     margin: 0;
     padding-bottom: var(--margin);
 }
+
+.checkbox-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-content: center;
+    font-size: 14px;
+    margin-top: var(--margin);
+    cursor: pointer;
+}
+
+.checkbox {
+    margin: 2px 4px 1px 0;
+    cursor: pointer;
+}
+
+input[type=checkbox] {
+    accent-color: var(--dark-purple);
+}
