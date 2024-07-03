@@ -66,6 +66,7 @@ export default function TutorialTooltip() {
                         disabled={!tutorial.hasStep(previousStepIndex)}
                         iconProps={{ iconName: "CaretSolidLeft" }}
                         onClick={() => setTutorialStepIndex(previousStepIndex)}
+                        // TODO
                         title="Previous step"
                     />
                     <IconButton
@@ -81,6 +82,7 @@ export default function TutorialTooltip() {
                                 : "Checkmark",
                         }}
                         onClick={selectNextTutorial}
+                        // TODO
                         title={tutorial.hasStep(nextStepIndex) ? "Next step" : "Finished"}
                     />
                 </div>

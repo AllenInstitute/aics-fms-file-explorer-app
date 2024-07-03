@@ -6,6 +6,7 @@ import { useButtonMenu } from "../Buttons";
 import { DnDItem, DnDItemRendererParams } from "../DnDList/DnDList";
 
 import styles from "./QueryPartRow.module.css";
+import Tooltip from "../Tooltip";
 
 export interface QueryPartRowItem extends DnDItem {
     titleIconName?: string;
@@ -41,24 +42,26 @@ export default function QueryGroupRow(props: Props) {
             })}
             style={{ marginLeft }}
         >
-            <div
-                className={classNames(styles.rowTitle, {
-                    [styles.shortenedRowTitle]: !!props.item.onRenderEditMenuList,
-                    [styles.dynamicRowTitle]: !isInteractive,
-                })}
-                title={props.item.title}
-                onClick={() => props.item.onClick?.(props.item.id)}
-            >
-                {props.item.titleIconName && (
-                    <Icon className={styles.icon} iconName={props.item.titleIconName} />
-                )}
-                <p>{props.item.title}</p>
-            </div>
+            <Tooltip content={props.item.title}>
+                <div
+                    className={classNames(styles.rowTitle, {
+                        [styles.shortenedRowTitle]: !!props.item.onRenderEditMenuList,
+                        [styles.dynamicRowTitle]: !isInteractive,
+                    })}
+                    onClick={() => props.item.onClick?.(props.item.id)}
+                >
+                    {props.item.titleIconName && (
+                        <Icon className={styles.icon} iconName={props.item.titleIconName} />
+                    )}
+                    <p>{props.item.title}</p>
+                </div>
+            </Tooltip>
             {!!props.item.onRenderEditMenuList && (
                 <IconButton
                     ariaLabel="Edit"
                     className={classNames(styles.iconButton, styles.hiddenInnerIcon)}
                     iconProps={{ iconName: "Edit" }}
+                    // TODO
                     title="Edit"
                     menuProps={editMenu}
                 />
@@ -69,6 +72,7 @@ export default function QueryGroupRow(props: Props) {
                     ariaLabel="Delete"
                     className={styles.iconButton}
                     iconProps={{ iconName: "Cancel" }}
+                    // TODO
                     title="Delete"
                     onClick={() => props.item.onDelete?.(props.item.id)}
                 />

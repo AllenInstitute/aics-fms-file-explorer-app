@@ -1,8 +1,11 @@
 import classNames from "classnames";
 import { map } from "lodash";
 import * as React from "react";
-import styles from "./FilterList.module.css";
+
+import Tooltip from "../Tooltip";
 import { Filter } from "../../entity/FileFilter";
+
+import styles from "./FilterList.module.css";
 
 interface Props {
     name: string;
@@ -46,17 +49,18 @@ export default function FilterList(props: Props) {
 
     return (
         <span className={styles.filter}>
-            <span
-                className={classNames(styles.filterText, {
-                    [styles.expandable]: overflowing,
-                    [styles.expanded]: expanded,
-                })}
-                onClick={() => overflowing && setExpanded((prev) => !prev)}
-                ref={textRef}
-                title={name + display}
-            >
-                <b>{name}</b> {display}
-            </span>
+            <Tooltip content={name + display}>
+                <span
+                    className={classNames(styles.filterText, {
+                        [styles.expandable]: overflowing,
+                        [styles.expanded]: expanded,
+                    })}
+                    onClick={() => overflowing && setExpanded((prev) => !prev)}
+                    ref={textRef}
+                >
+                    <b>{name}</b> {display}
+                </span>
+            </Tooltip>
         </span>
     );
 }

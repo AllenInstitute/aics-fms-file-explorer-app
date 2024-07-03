@@ -4,6 +4,7 @@ import * as React from "react";
 import { useSelector } from "react-redux";
 
 import FilterList from "./FilterList";
+import Tooltip from "../Tooltip";
 import { metadata, selection } from "../../state";
 
 import styles from "./EmptyFileListMessage.module.css";
@@ -47,17 +48,19 @@ export default function EmptyFileListMessage() {
                                             (a) => a.name === annotationName
                                         );
                                         return (
-                                            <span
+                                            <Tooltip
                                                 key={annotation?.name}
-                                                title={annotation?.description}
+                                                content={annotation?.description}
                                             >
-                                                {index > 0
-                                                    ? index === annotationHierarchy.length - 1
-                                                        ? " and "
-                                                        : ", "
-                                                    : " "}
-                                                <b>{annotation?.displayName}</b>
-                                            </span>
+                                                <span key={annotation?.name}>
+                                                    {index > 0
+                                                        ? index === annotationHierarchy.length - 1
+                                                            ? " and "
+                                                            : ", "
+                                                        : " "}
+                                                    <b>{annotation?.displayName}</b>
+                                                </span>
+                                            </Tooltip>
                                         );
                                     })}
                                 </span>
