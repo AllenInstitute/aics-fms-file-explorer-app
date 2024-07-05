@@ -34,6 +34,7 @@
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.28.1-dev106.0",
     "react-router-dom": "^6.23.1",
-    "regenerator-runtime": "0.13.x"
+    "regenerator-runtime": "0.13.x",
+    "webpack-node-externals": "^3.0.0"
   }
 }
