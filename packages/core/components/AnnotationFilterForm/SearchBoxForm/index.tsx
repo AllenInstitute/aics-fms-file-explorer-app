@@ -18,7 +18,9 @@ interface SearchBoxFormProps {
     onSelect: (item: ListItem) => void;
     onSelectAll: () => void;
     onSearch: (filterValue: string) => void;
+    onToggleFuzzySearch: () => void;
     fieldName: string;
+    fuzzySearchEnabled?: boolean;
     defaultValue: FileFilter | undefined;
 }
 
@@ -28,6 +30,18 @@ interface SearchBoxFormProps {
  */
 export default function SearchBoxForm(props: SearchBoxFormProps) {
     const [isListPicking, setIsListPicking] = React.useState(false);
+    const [isFuzzySearching, setIsFuzzySearching] = React.useState(
+        props?.fuzzySearchEnabled || false
+    );
+    const defaultSearchBox = props?.fuzzySearchEnabled ? "search-box-fuzzy" : "search-box-exact";
+
+    function onSearchSubmitted(value: string) {
+        // Make sure fuzzy search is synchronized in state
+        if (isFuzzySearching !== props?.fuzzySearchEnabled) {
+            props.onToggleFuzzySearch();
+        }
+        props.onSearch(value);
+    }
 
     return (
         <div className={classNames(props.className, styles.container)}>
@@ -35,11 +49,15 @@ export default function SearchBoxForm(props: SearchBoxFormProps) {
             <ChoiceGroup
                 className={styles.choiceGroup}
                 label="Filter type"
-                defaultSelectedKey={isListPicking ? "list-picker" : "search-box"}
+                defaultSelectedKey={isListPicking ? "list-picker" : defaultSearchBox}
                 options={[
                     {
-                        key: "search-box",
-                        text: "Search box",
+                        key: "search-box-exact",
+                        text: "Exact match search",
+                    },
+                    {
+                        key: "search-box-fuzzy",
+                        text: "Partial match search",
                     },
                     {
                         key: "list-picker",
@@ -50,9 +68,14 @@ export default function SearchBoxForm(props: SearchBoxFormProps) {
                 onChange={(_, selection) => {
                     // Clear the selection if the user switches to the search box
                     // and the default value is not in the list (i.e. not deselectable)
-                    if (props.defaultValue && !props.items.some((item) => item.selected)) {
+                    if (
+                        selection?.key === "list-picker" &&
+                        props.defaultValue &&
+                        !props.items.some((item) => item.selected)
+                    ) {
                         props.onDeselectAll();
                     }
+                    setIsFuzzySearching(selection?.key === "search-box-fuzzy");
                     setIsListPicking(selection?.key === "list-picker");
                 }}
             />
@@ -70,7 +93,7 @@ export default function SearchBoxForm(props: SearchBoxFormProps) {
                     <SearchBox
                         defaultValue={props.defaultValue}
                         onReset={props.onDeselectAll}
-                        onSearch={props.onSearch}
+                        onSearch={onSearchSubmitted}
                         placeholder={`Search by ${props.fieldName}`}
                     />
                 </div>

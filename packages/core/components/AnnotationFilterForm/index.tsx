@@ -14,6 +14,7 @@ import NumberRangePicker from "../NumberRangePicker";
 import SearchBoxForm from "./SearchBoxForm";
 import DateRangePicker from "../DateRangePicker";
 import { interaction, selection } from "../../state";
+import FuzzyFilter from "../../entity/FuzzyFilter";
 
 import styles from "./AnnotationFilterForm.module.css";
 
@@ -30,6 +31,7 @@ interface AnnotationFilterFormProps {
 export default function AnnotationFilterForm(props: AnnotationFilterFormProps) {
     const dispatch = useDispatch();
     const allFilters = useSelector(selection.selectors.getFileFilters);
+    const fuzzyFilters = useSelector(selection.selectors.getFuzzyFilters);
     const annotationService = useSelector(interaction.selectors.getAnnotationService);
     const [annotationValues, isLoading, errorMessage] = useAnnotationValues(
         props.annotation.name,
@@ -51,8 +53,23 @@ export default function AnnotationFilterForm(props: AnnotationFilterFormProps) {
         }));
     }, [props.annotation, annotationValues, filtersForAnnotation]);
 
+    const fuzzySearchEnabled: boolean = React.useMemo(() => {
+        return (
+            fuzzyFilters?.some((filter) => filter.annotationName === props.annotation.name) || false
+        );
+    }, [fuzzyFilters, props.annotation]);
+
+    const onToggleFuzzySearch = () => {
+        const fuzzyFilter = new FuzzyFilter(props.annotation.name);
+        fuzzySearchEnabled
+            ? dispatch(selection.actions.removeFuzzyFilter(fuzzyFilter))
+            : dispatch(selection.actions.addFuzzyFilter(fuzzyFilter));
+    };
+
     const onDeselectAll = () => {
         dispatch(selection.actions.removeFileFilter(filtersForAnnotation));
+        // Remove fuzzy filter if present
+        if (fuzzySearchEnabled) onToggleFuzzySearch();
     };
 
     const onDeselect = (item: ListItem) => {
@@ -158,6 +175,7 @@ export default function AnnotationFilterForm(props: AnnotationFilterFormProps) {
             return (
                 <SearchBoxForm
                     className={styles.picker}
+                    onToggleFuzzySearch={onToggleFuzzySearch}
                     items={items}
                     onSelect={onSelect}
                     onDeselect={onDeselect}
@@ -165,6 +183,7 @@ export default function AnnotationFilterForm(props: AnnotationFilterFormProps) {
                     onDeselectAll={onDeselectAll}
                     onSearch={onSearch}
                     fieldName={props.annotation.displayName}
+                    fuzzySearchEnabled={fuzzySearchEnabled}
                     title={`Filter by ${props.annotation.displayName}`}
                     defaultValue={filtersForAnnotation?.[0]}
                 />

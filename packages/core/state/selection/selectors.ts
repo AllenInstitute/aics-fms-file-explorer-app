@@ -19,6 +19,7 @@ export const getColumnWidths = (state: State) => state.selection.columnWidths;
 export const getFileGridColumnCount = (state: State) => state.selection.fileGridColumnCount;
 export const getFileFilters = (state: State) => state.selection.filters;
 export const getFileSelection = (state: State) => state.selection.fileSelection;
+export const getFuzzyFilters = (state: State) => state.selection.fuzzyFilters;
 export const getIsDarkTheme = (state: State) => state.selection.isDarkTheme;
 export const getOpenFileFolders = (state: State) => state.selection.openFileFolders;
 export const getRecentAnnotations = (state: State) => state.selection.recentAnnotations;
@@ -45,6 +46,7 @@ export const getCurrentQueryParts = createSelector(
     [
         getAnnotationHierarchy,
         getFileFilters,
+        getFuzzyFilters,
         getOpenFileFolders,
         getSortColumn,
         getSelectedDataSources,
@@ -53,6 +55,7 @@ export const getCurrentQueryParts = createSelector(
     (
         hierarchy,
         filters,
+        fuzzyFilters,
         openFolders,
         sortColumn,
         sources,
@@ -60,6 +63,7 @@ export const getCurrentQueryParts = createSelector(
     ): FileExplorerURLComponents => ({
         hierarchy,
         filters,
+        fuzzyFilters,
         openFolders,
         sortColumn,
         sources,

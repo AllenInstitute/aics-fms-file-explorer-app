@@ -14,6 +14,7 @@ import {
     SET_ANNOTATION_HIERARCHY,
     SET_AVAILABLE_ANNOTATIONS,
     SET_FILE_FILTERS,
+    SET_FUZZY_FILTERS,
     SET_FILE_SELECTION,
     SET_OPEN_FILE_FOLDERS,
     RESIZE_COLUMN,
@@ -41,6 +42,7 @@ import {
 import FileSort, { SortOrder } from "../../entity/FileSort";
 import Tutorial from "../../entity/Tutorial";
 import { Source } from "../../entity/FileExplorerURL";
+import FuzzyFilter from "../../entity/FuzzyFilter";
 
 export interface SelectionStateBranch {
     annotationHierarchy: string[];
@@ -54,6 +56,7 @@ export interface SelectionStateBranch {
     fileGridColumnCount: number;
     fileSelection: FileSelection;
     filters: FileFilter[];
+    fuzzyFilters?: FuzzyFilter[];
     isDarkTheme: boolean;
     openFileFolders: FileFolder[];
     recentAnnotations: string[];
@@ -82,6 +85,7 @@ export const initialState = {
     fileGridColumnCount: THUMBNAIL_SIZE_TO_NUM_COLUMNS.LARGE,
     fileSelection: new FileSelection(),
     filters: [],
+    fuzzyFilters: [],
     openFileFolders: [],
     recentAnnotations: [],
     shouldDisplaySmallFont: false,
@@ -117,6 +121,10 @@ export default makeReducer<SelectionStateBranch>(
 
             // Reset file selections when file filters change
             fileSelection: new FileSelection(),
+        }),
+        [SET_FUZZY_FILTERS]: (state, action) => ({
+            ...state,
+            fuzzyFilters: action.payload,
         }),
         [SORT_COLUMN]: (state, action) => {
             if (state.sortColumn?.annotationName === action.payload) {

@@ -44,7 +44,7 @@ describe("<SearchBox/>", () => {
             },
         });
 
-        // Sanity check
+        // Consistency check
         expect(screen.getByRole<HTMLInputElement>("searchbox").value).to.equal("bar");
 
         // Hit reset

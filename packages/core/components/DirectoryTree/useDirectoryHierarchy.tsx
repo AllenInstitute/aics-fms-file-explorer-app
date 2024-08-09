@@ -105,6 +105,7 @@ const useDirectoryHierarchy = (
     const annotationService = useSelector(interaction.selectors.getAnnotationService);
     const fileService = useSelector(interaction.selectors.getFileService);
     const selectedFileFilters = useSelector(selection.selectors.getFileFilters);
+    const fuzzyFilters = useSelector(selection.selectors.getFuzzyFilters);
     const sortColumn = useSelector(selection.selectors.getSortColumn);
     const [state, dispatch] = React.useReducer(reducer, INITIAL_STATE);
 
@@ -152,18 +153,28 @@ const useDirectoryHierarchy = (
                     if (isRoot) {
                         values = await annotationService.fetchRootHierarchyValues(
                             hierarchy,
-                            selectedFileFilters
+                            selectedFileFilters,
+                            fuzzyFilters
                         );
                     } else {
                         values = await annotationService.fetchHierarchyValuesUnderPath(
                             hierarchy,
                             pathToNode,
-                            selectedFileFilters
+                            selectedFileFilters,
+                            fuzzyFilters
                         );
                     }
 
                     const filteredValues = values.filter((value) => {
                         if (!isEmpty(userSelectedFiltersForCurrentAnnotation)) {
+                            if (
+                                fuzzyFilters?.some(
+                                    (fuzzy) => fuzzy.annotationName === annotationNameAtDepth
+                                )
+                            ) {
+                                // There can only be one selected filter with fuzzy search
+                                return value.includes(userSelectedFiltersForCurrentAnnotation[0]);
+                            }
                             return userSelectedFiltersForCurrentAnnotation.includes(value);
                         }
 
@@ -211,6 +222,7 @@ const useDirectoryHierarchy = (
                         const childNodeFileSet = new FileSet({
                             fileService,
                             filters,
+                            fuzzyFilters,
                             sort: sortColumn,
                         });
 
@@ -255,6 +267,7 @@ const useDirectoryHierarchy = (
         collapsed,
         fileService,
         fileSet,
+        fuzzyFilters,
         hierarchy,
         isRoot,
         isLeaf,

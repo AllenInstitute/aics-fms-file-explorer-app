@@ -10,7 +10,7 @@ import styles from "./Features.module.css";
  * Component responsible for rendering the features section of the home page.
  */
 export default function Features() {
-    const wrapStackTokens: IStackTokens = { childrenGap: 12 + ' ' + 30 };
+    const wrapStackTokens: IStackTokens = { childrenGap: 12 + " " + 30 };
     const [{ activeFeatureIndex, activeSlideIndex }, setActiveSlideIndices] = React.useState({
         activeFeatureIndex: 0,
         activeSlideIndex: 0,
@@ -73,44 +73,44 @@ export default function Features() {
 
     return (
         <div className={styles.flexContainer}>
-            <Stack horizontal wrap styles={{root: styles.stack}} tokens={wrapStackTokens}>
-            <Stack.Item grow styles={{root: styles.stackItemLeft}}>
-                <div className={styles.features}>
-                    {FEATURE_OPTIONS.map((feature, index) => (
-                        <button
-                            className={classNames({
-                                // FluentUI v8 doesn't have a tab component, so enforcing active state manually
-                                [styles.selectedFeature]: activeFeature.id === feature.id,
-                            })}
-                            onClick={() => changeFeature(index)}
-                            role="tab"
-                            aria-selected={activeFeature.id === feature.id}
-                            key={`feature-${feature.id}`}
-                        >
-                            {feature.text}
-                        </button>
-                    ))}
-                </div>
-            </Stack.Item>
-            <Stack.Item grow styles={{root: styles.stackItemRight}}>
-            <div className={styles.carousel}>
-                <img height={300} src={activeSlide.imgSrc} />
-                <div className={styles.slideButtonsContainer}>
-                    {activeFeature.slides.map((_, index) => (
-                        <button
-                            className={classNames(styles.slideButton, {
-                                [styles.selectedSlide]: activeSlideIndex === index,
-                            })}
-                            onClick={() => changeFeature(activeFeatureIndex, index)}
-                            role="tab"
-                            aria-selected={activeSlideIndex === index}
-                            key={`slide-${index}`}
-                        />
-                    ))}
-                </div>
-                <p>{activeSlide.caption}</p>
-            </div>
-            </Stack.Item>
+            <Stack horizontal wrap styles={{ root: styles.stack }} tokens={wrapStackTokens}>
+                <Stack.Item grow styles={{ root: styles.stackItemLeft }}>
+                    <div className={styles.features}>
+                        {FEATURE_OPTIONS.map((feature, index) => (
+                            <button
+                                className={classNames({
+                                    // FluentUI v8 doesn't have a tab component, so enforcing active state manually
+                                    [styles.selectedFeature]: activeFeature.id === feature.id,
+                                })}
+                                onClick={() => changeFeature(index)}
+                                role="tab"
+                                aria-selected={activeFeature.id === feature.id}
+                                key={`feature-${feature.id}`}
+                            >
+                                {feature.text}
+                            </button>
+                        ))}
+                    </div>
+                </Stack.Item>
+                <Stack.Item grow styles={{ root: styles.stackItemRight }}>
+                    <div className={styles.carousel}>
+                        <img height={300} src={activeSlide.imgSrc} />
+                        <div className={styles.slideButtonsContainer}>
+                            {activeFeature.slides.map((_, index) => (
+                                <button
+                                    className={classNames(styles.slideButton, {
+                                        [styles.selectedSlide]: activeSlideIndex === index,
+                                    })}
+                                    onClick={() => changeFeature(activeFeatureIndex, index)}
+                                    role="tab"
+                                    aria-selected={activeSlideIndex === index}
+                                    key={`slide-${index}`}
+                                />
+                            ))}
+                        </div>
+                        <p>{activeSlide.caption}</p>
+                    </div>
+                </Stack.Item>
             </Stack>
         </div>
     );
